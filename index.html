@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WorldTime">
+<title>WorldTime</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --blue: #003D5B;
+  --jade: #007380;
+  --teal: #25E2CC;
+  --pink: #CC3262;
+  --orange: #FF8400;
+  --yellow: #FBCA18;
+  --charcoal: #2A2B2C;
+  --gray-bg: #F2F2F2;
+  --white: #FFFFFF;
+  --border: #D0D5DC;
+  --border-light: #E5E8ED;
+  --muted: #6B7280;
+  --left-w: 170px;
+  --cell-w: 54px;
+  --cell-h: 48px;
+  --hdr-h: 50px;
+}
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'Montserrat', sans-serif; background: var(--gray-bg); color: var(--charcoal); display: flex; flex-direction: column; }
+
+/* ── TOP BAR ── */
+.topbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 14px; height: 52px;
+  padding-top: env(safe-area-inset-top);
+  height: calc(52px + env(safe-area-inset-top));
+  background: var(--blue); flex-shrink: 0; z-index: 60;
+}
+.logo { font-weight: 800; font-size: 16px; color: var(--teal); flex-shrink: 0; letter-spacing: -0.3px; }
+.logo span { color: var(--white); }
+
+.search-wrap { flex: 1; position: relative; }
+.search-wrap input {
+  width: 100%; background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.25);
+  border-radius: 8px; padding: 8px 12px 8px 30px;
+  font-family: 'Montserrat', sans-serif; font-size: 13px; color: var(--white); outline: none;
+  transition: border-color .15s, background .15s;
+}
+.search-wrap input:focus { border-color: var(--teal); background: rgba(255,255,255,0.18); }
+.search-wrap input::placeholder { color: rgba(255,255,255,0.5); }
+.si-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.5); font-size: 15px; pointer-events: none; font-weight: 700; }
+
+.dropdown {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--white); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.18); z-index: 400; max-height: 280px; overflow-y: auto; display: none;
+}
+.dropdown.open { display: block; }
+.drop-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  cursor: pointer; border-bottom: 1px solid var(--border-light); transition: background .1s;
+}
+.drop-item:last-child { border-bottom: none; }
+.drop-item:hover { background: var(--gray-bg); }
+.drop-flag { font-size: 20px; }
+.drop-name { font-size: 13px; font-weight: 700; color: var(--charcoal); }
+.drop-country { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+/* Topbar controls */
+.tb-ctrl {
+  background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.25);
+  color: var(--white); border-radius: 8px; padding: 6px 11px;
+  font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700;
+  cursor: pointer; flex-shrink: 0; white-space: nowrap; transition: background .15s, border-color .15s;
+  letter-spacing: 0.3px;
+}
+.tb-ctrl:hover { background: rgba(255,255,255,0.2); }
+.tb-ctrl.active { background: var(--teal); border-color: var(--teal); color: var(--blue); }
+
+/* Office hours picker (hidden by default, shown when OH active) */
+.oh-picker {
+  display: none; align-items: center; gap: 4px;
+  background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2);
+  border-radius: 8px; padding: 4px 8px; flex-shrink: 0;
+}
+.oh-picker.open { display: flex; }
+.oh-picker label { font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 600; }
+.oh-picker select {
+  background: transparent; border: none; color: var(--white);
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500;
+  outline: none; cursor: pointer; padding: 0 2px;
+}
+.oh-picker select option { background: var(--blue); color: var(--white); }
+
+/* Views button */
+.views-btn {
+  background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.25);
+  color: var(--white); border-radius: 8px; padding: 7px 12px;
+  font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; flex-shrink: 0; white-space: nowrap; transition: background .15s;
+}
+.views-btn:hover { background: rgba(255,255,255,0.2); }
+
+/* ── VIEWS BAR ── */
+.views-bar {
+  background: var(--blue); border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; gap: 6px; padding: 0 14px 8px;
+  flex-shrink: 0; flex-wrap: wrap; display: none;
+}
+.views-bar.open { display: flex; }
+.view-chip {
+  display: flex; align-items: center; gap: 0;
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px; overflow: hidden; cursor: pointer;
+}
+.view-chip-name {
+  padding: 5px 10px; font-size: 11px; font-weight: 600; color: var(--white);
+  transition: background .1s;
+}
+.view-chip-name:hover { background: rgba(255,255,255,0.15); }
+.view-chip-name.active-view { background: var(--jade); border-right: 1px solid rgba(255,255,255,0.15); }
+.view-chip-del { padding: 5px 7px; font-size: 14px; color: rgba(255,255,255,0.5); transition: color .1s; }
+.view-chip-del:hover { color: var(--pink); }
+.view-chip-link { padding: 5px 4px; font-size: 11px; color: rgba(255,255,255,0.4); transition: color .1s; cursor: pointer; }
+.view-chip-link:hover { color: var(--teal); }
+.copy-toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+  background: var(--charcoal); color: var(--white);
+  padding: 8px 18px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+  pointer-events: none; opacity: 0;
+  transition: opacity .2s; z-index: 999;
+}
+.save-view-btn {
+  background: var(--teal); color: var(--blue); border: none;
+  border-radius: 6px; padding: 5px 12px;
+  font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700;
+  cursor: pointer; transition: opacity .15s;
+}
+.save-view-btn:hover { opacity: .85; }
+
+
+
+/* ── DATE NAV ── */
+.date-nav {
+  background: var(--white); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; flex-shrink: 0;
+  overflow-x: auto; scrollbar-width: none;
+  padding-left: var(--left-w);
+}
+.date-nav::-webkit-scrollbar { display: none; }
+.date-nav-inner { display: flex; gap: 2px; padding: 7px 12px; }
+.date-pill {
+  padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; color: var(--muted); border: none; background: none;
+  line-height: 1.3; text-align: center; transition: background .1s, color .1s;
+}
+.date-pill:hover { background: var(--gray-bg); color: var(--charcoal); }
+.date-pill.active { background: var(--blue); color: var(--white); }
+.date-pill.is-weekend:not(.active) { color: var(--pink); }
+
+/* ── GRID ── */
+.grid-area { flex: 1; overflow: hidden; }
+.grid-scroll { width: 100%; height: 100%; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.grid-scroll::-webkit-scrollbar { height: 5px; width: 5px; }
+.grid-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.gtable { border-collapse: collapse; min-width: max-content; }
+
+/* Corner */
+.corner-cell {
+  position: sticky; left: 0; top: 0; z-index: 40;
+  background: var(--blue); border-right: 2px solid var(--jade); border-bottom: 2px solid var(--border);
+  width: var(--left-w); min-width: var(--left-w); max-width: var(--left-w); height: var(--hdr-h);
+  padding: 0 12px; vertical-align: middle;
+}
+.corner-label { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 1.2px; }
+
+/* Hour header */
+.hh-cell {
+  position: sticky; top: 0; z-index: 20;
+  width: var(--cell-w); min-width: var(--cell-w); max-width: var(--cell-w); height: var(--hdr-h);
+  background: var(--white); border-bottom: 2px solid var(--border); border-right: 1px solid var(--border-light);
+  text-align: center; vertical-align: middle;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);
+  cursor: pointer; user-select: none; transition: background .1s;
+}
+.hh-cell:hover { background: var(--gray-bg); }
+.hh-cell.sel { background: var(--blue); color: var(--white); }
+.hh-cell .hnum { font-size: 13px; font-weight: 500; display: block; line-height: 1.1; }
+.hh-cell .hap { font-size: 9px; display: block; opacity: .75; }
+
+/* City left */
+.city-cell {
+  position: sticky; left: 0; z-index: 15;
+  width: var(--left-w); min-width: var(--left-w); max-width: var(--left-w);
+  background: var(--white); border-right: 2px solid var(--jade); border-bottom: 1px solid var(--border);
+  padding: 5px 10px; vertical-align: middle;
+}
+.city-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.cname { font-size: 12px; font-weight: 700; color: var(--blue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+.ccountry { font-size: 9px; color: var(--muted); margin-top: 1px; }
+.ctime { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; color: var(--jade); margin-top: 2px; }
+.cdel { background: none; border: none; color: #ccc; font-size: 14px; cursor: pointer; padding: 0 1px; line-height: 1; flex-shrink: 0; }
+.cdel:hover { color: var(--pink); }
+
+/* Home city */
+.city-cell.is-home { background: var(--blue); border-right-color: var(--teal); }
+.city-cell.is-home .cname { color: var(--teal); }
+.city-cell.is-home .ccountry { color: rgba(255,255,255,0.5); }
+.city-cell.is-home .ctime { color: var(--white); }
+.city-cell.is-home .cdel { color: rgba(255,255,255,0.3); }
+.city-cell.is-home .cdel:hover { color: var(--pink); }
+.chome-btn {
+  background: none; border: none; cursor: pointer; padding: 0 1px;
+  font-size: 11px; line-height: 1; flex-shrink: 0;
+  opacity: 0.3; transition: opacity .15s;
+}
+.chome-btn:hover { opacity: 1; }
+.chome-btn.active { opacity: 1; }
+.home-tag {
+  font-size: 7px; font-weight: 800; color: var(--teal);
+  text-transform: uppercase; letter-spacing: 0.8px;
+  display: inline-block; margin-left: 4px;
+}
+.hd-cell {
+  width: var(--cell-w); min-width: var(--cell-w); max-width: var(--cell-w); height: var(--cell-h);
+  text-align: center; vertical-align: middle;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  border-right: 1px solid rgba(0,0,0,.04); border-bottom: 1px solid rgba(0,0,0,.04);
+  cursor: pointer; user-select: none; position: relative; transition: filter .1s;
+}
+body.fmt24 .hd-cell .ch { font-size: 11px; }
+body.fmt24 .hd-cell { font-size: 11px; }
+.hd-cell:hover { filter: brightness(.93); }
+.hd-cell .ch { font-weight: 500; display: block; line-height: 1.1; }
+.hd-cell .ca { font-size: 9px; display: block; opacity: .65; }
+
+/* 2-state cell colors: office hours vs off hours */
+.h-off  { background: #cdd2dc; color: #4a5270; }
+.h-work { background: #dff0ee; color: var(--jade); }
+
+/* Weekend overlay */
+.is-wk { background-image: repeating-linear-gradient(45deg, rgba(204,50,98,0.07) 0px, rgba(204,50,98,0.07) 2px, transparent 2px, transparent 8px) !important; }
+.is-wk.hd-cell { border-bottom-color: rgba(204,50,98,0.12) !important; }
+
+/* Bank holiday overlay */
+.is-bh { background-image: repeating-linear-gradient(135deg, rgba(255,132,0,0.1) 0px, rgba(255,132,0,0.1) 2px, transparent 2px, transparent 8px) !important; }
+
+/* Both weekend + holiday */
+.is-wk.is-bh { background-image:
+  repeating-linear-gradient(45deg, rgba(204,50,98,0.07) 0px, rgba(204,50,98,0.07) 2px, transparent 2px, transparent 8px),
+  repeating-linear-gradient(135deg, rgba(255,132,0,0.1) 0px, rgba(255,132,0,0.1) 2px, transparent 2px, transparent 8px) !important; }
+
+/* Selected */
+.hd-cell.sel { background: var(--blue) !important; background-image: none !important; color: var(--white) !important; }
+.hd-cell.sel .ca { opacity: .8; }
+
+/* Day boundary — white gap */
+.day-bd { border-left: 4px solid var(--gray-bg) !important; }
+.day-tag-abs { position: absolute; top: 2px; left: 3px; font-size: 7px; font-weight: 700; color: var(--jade); line-height: 1; pointer-events: none; }
+
+/* Cell badges */
+.cell-badges { position: absolute; top: 2px; right: 2px; display: flex; gap: 1px; flex-direction: column; align-items: flex-end; }
+.badge-wk { font-size: 7px; font-weight: 800; color: var(--pink); line-height: 1; }
+.badge-bh { font-size: 6px; font-weight: 800; color: var(--orange); line-height: 1; background: rgba(255,132,0,0.15); padding: 1px 2px; border-radius: 2px; }
+
+/* Empty */
+.empty-hint { padding: 60px 20px; text-align: center; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.empty-hint .ei { font-size: 32px; margin-bottom: 12px; }
+
+/* Save modal */
+.modal-backdrop { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; }
+.modal-backdrop.open { display: flex; }
+.modal { background: var(--white); border-radius: 14px; padding: 24px; width: 300px; box-shadow: 0 16px 40px rgba(0,0,0,.25); }
+.modal h3 { font-size: 16px; font-weight: 700; color: var(--blue); margin-bottom: 14px; }
+.modal input {
+  width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; font-family: 'Montserrat', sans-serif; font-size: 14px; outline: none;
+  transition: border-color .15s; margin-bottom: 14px;
+}
+.modal input:focus { border-color: var(--blue); }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.btn-cancel { background: none; border: 1.5px solid var(--border); color: var(--muted); border-radius: 8px; padding: 8px 16px; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-save { background: var(--blue); color: var(--white); border: none; border-radius: 8px; padding: 8px 16px; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+.bottom-safe { flex-shrink: 0; height: env(safe-area-inset-bottom); background: var(--white); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">world<span>time</span></div>
+  <div class="search-wrap">
+    <span class="si-icon">+</span>
+    <input id="si" type="text" placeholder="+ Add city or timezone" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div class="dropdown" id="dd"></div>
+  </div>
+  <button class="tb-ctrl" id="fmtToggle">12h</button>
+  <button class="tb-ctrl" id="ohToggle">☀️ Office</button>
+  <div class="oh-picker" id="ohPicker">
+    <label>from</label>
+    <select id="ohFrom"></select>
+    <label>to</label>
+    <select id="ohTo"></select>
+  </div>
+  <button class="views-btn" id="viewsToggle">📋 Views</button>
+</div>
+
+<div class="views-bar" id="viewsBar">
+  <button class="save-view-btn" id="saveViewBtn">＋ Save current view</button>
+  <span id="viewChips"></span>
+</div>
+
+
+
+<div class="date-nav" id="dateNav">
+  <div class="date-nav-inner" id="dateNavInner"></div>
+</div>
+
+<div class="grid-area">
+  <div class="grid-scroll" id="gs">
+    <table class="gtable" id="gt"></table>
+  </div>
+</div>
+
+<div class="copy-toast" id="copyToast">🔗 Link copiato!</div>
+
+<div class="bottom-safe"></div>
+
+<!-- Save View Modal -->
+<div class="modal-backdrop" id="modalBg">
+  <div class="modal">
+    <h3>Save this view</h3>
+    <input id="viewNameInput" type="text" placeholder="e.g. EMEA Team, Bucharest Trip…" maxlength="30">
+    <div class="modal-btns">
+      <button class="btn-cancel" id="modalCancel">Cancel</button>
+      <button class="btn-save" id="modalConfirm">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// CITY DATA
+// ═══════════════════════════════════════════════════
+const ALL = [
+  {name:"London",country:"United Kingdom",flag:"🇬🇧",tz:"Europe/London",cc:"GB"},
+  {name:"Rome",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Milan",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Paris",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Berlin",country:"Germany",flag:"🇩🇪",tz:"Europe/Berlin",cc:"DE"},
+  {name:"Amsterdam",country:"Netherlands",flag:"🇳🇱",tz:"Europe/Amsterdam",cc:"NL"},
+  {name:"Dublin",country:"Ireland",flag:"🇮🇪",tz:"Europe/Dublin",cc:"IE"},
+  {name:"Madrid",country:"Spain",flag:"🇪🇸",tz:"Europe/Madrid",cc:"ES"},
+  {name:"Lisbon",country:"Portugal",flag:"🇵🇹",tz:"Europe/Lisbon",cc:"PT"},
+  {name:"Zurich",country:"Switzerland",flag:"🇨🇭",tz:"Europe/Zurich",cc:"CH"},
+  {name:"Vienna",country:"Austria",flag:"🇦🇹",tz:"Europe/Vienna",cc:"AT"},
+  {name:"Brussels",country:"Belgium",flag:"🇧🇪",tz:"Europe/Brussels",cc:"BE"},
+  {name:"Warsaw",country:"Poland",flag:"🇵🇱",tz:"Europe/Warsaw",cc:"PL"},
+  {name:"Prague",country:"Czech Republic",flag:"🇨🇿",tz:"Europe/Prague",cc:"CZ"},
+  {name:"Bucharest",country:"Romania",flag:"🇷🇴",tz:"Europe/Bucharest",cc:"RO"},
+  {name:"Istanbul",country:"Turkey",flag:"🇹🇷",tz:"Europe/Istanbul",cc:"TR"},
+  {name:"Athens",country:"Greece",flag:"🇬🇷",tz:"Europe/Athens",cc:"GR"},
+  {name:"Helsinki",country:"Finland",flag:"🇫🇮",tz:"Europe/Helsinki",cc:"FI"},
+  {name:"Stockholm",country:"Sweden",flag:"🇸🇪",tz:"Europe/Stockholm",cc:"SE"},
+  {name:"Oslo",country:"Norway",flag:"🇳🇴",tz:"Europe/Oslo",cc:"NO"},
+  {name:"Copenhagen",country:"Denmark",flag:"🇩🇰",tz:"Europe/Copenhagen",cc:"DK"},
+  {name:"Moscow",country:"Russia",flag:"🇷🇺",tz:"Europe/Moscow",cc:"RU"},
+  {name:"Dubai",country:"UAE",flag:"🇦🇪",tz:"Asia/Dubai",cc:"AE"},
+  {name:"Riyadh",country:"Saudi Arabia",flag:"🇸🇦",tz:"Asia/Riyadh",cc:"SA"},
+  {name:"Tel Aviv",country:"Israel",flag:"🇮🇱",tz:"Asia/Jerusalem",cc:"IL"},
+  {name:"Cairo",country:"Egypt",flag:"🇪🇬",tz:"Africa/Cairo",cc:"EG"},
+  {name:"Mumbai",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Delhi",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Bangkok",country:"Thailand",flag:"🇹🇭",tz:"Asia/Bangkok",cc:"TH"},
+  {name:"Singapore",country:"Singapore",flag:"🇸🇬",tz:"Asia/Singapore",cc:"SG"},
+  {name:"Kuala Lumpur",country:"Malaysia",flag:"🇲🇾",tz:"Asia/Kuala_Lumpur",cc:"MY"},
+  {name:"Hong Kong",country:"Hong Kong",flag:"🇭🇰",tz:"Asia/Hong_Kong",cc:"HK"},
+  {name:"Shanghai",country:"China",flag:"🇨🇳",tz:"Asia/Shanghai",cc:"CN"},
+  {name:"Beijing",country:"China",flag:"🇨🇳",tz:"Asia/Shanghai",cc:"CN"},
+  {name:"Seoul",country:"South Korea",flag:"🇰🇷",tz:"Asia/Seoul",cc:"KR"},
+  {name:"Tokyo",country:"Japan",flag:"🇯🇵",tz:"Asia/Tokyo",cc:"JP"},
+  {name:"Sydney",country:"Australia",flag:"🇦🇺",tz:"Australia/Sydney",cc:"AU"},
+  {name:"Melbourne",country:"Australia",flag:"🇦🇺",tz:"Australia/Melbourne",cc:"AU"},
+  {name:"Perth",country:"Australia",flag:"🇦🇺",tz:"Australia/Perth",cc:"AU"},
+  {name:"Auckland",country:"New Zealand",flag:"🇳🇿",tz:"Pacific/Auckland",cc:"NZ"},
+  {name:"New York",country:"United States",flag:"🇺🇸",tz:"America/New_York",cc:"US"},
+  {name:"Los Angeles",country:"United States",flag:"🇺🇸",tz:"America/Los_Angeles",cc:"US"},
+  {name:"Chicago",country:"United States",flag:"🇺🇸",tz:"America/Chicago",cc:"US"},
+  {name:"Toronto",country:"Canada",flag:"🇨🇦",tz:"America/Toronto",cc:"CA"},
+  {name:"Vancouver",country:"Canada",flag:"🇨🇦",tz:"America/Vancouver",cc:"CA"},
+  {name:"Mexico City",country:"Mexico",flag:"🇲🇽",tz:"America/Mexico_City",cc:"MX"},
+  {name:"São Paulo",country:"Brazil",flag:"🇧🇷",tz:"America/Sao_Paulo",cc:"BR"},
+  {name:"Buenos Aires",country:"Argentina",flag:"🇦🇷",tz:"America/Argentina/Buenos_Aires",cc:"AR"},
+  {name:"Nairobi",country:"Kenya",flag:"🇰🇪",tz:"Africa/Nairobi",cc:"KE"},
+  {name:"Johannesburg",country:"South Africa",flag:"🇿🇦",tz:"Africa/Johannesburg",cc:"ZA"},
+  {name:"Lagos",country:"Nigeria",flag:"🇳🇬",tz:"Africa/Lagos",cc:"NG"},
+  {name:"Karachi",country:"Pakistan",flag:"🇵🇰",tz:"Asia/Karachi",cc:"PK"},
+  {name:"Dhaka",country:"Bangladesh",flag:"🇧🇩",tz:"Asia/Dhaka",cc:"BD"},
+  {name:"Jakarta",country:"Indonesia",flag:"🇮🇩",tz:"Asia/Jakarta",cc:"ID"},
+  {name:"Ho Chi Minh",country:"Vietnam",flag:"🇻🇳",tz:"Asia/Ho_Chi_Minh",cc:"VN"},
+  {name:"Taipei",country:"Taiwan",flag:"🇹🇼",tz:"Asia/Taipei",cc:"TW"},
+  {name:"Denver",country:"United States",flag:"🇺🇸",tz:"America/Denver",cc:"US"},
+  {name:"Casablanca",country:"Morocco",flag:"🇲🇦",tz:"Africa/Casablanca",cc:"MA"},
+  {name:"Bogotá",country:"Colombia",flag:"🇨🇴",tz:"America/Bogota",cc:"CO"},
+  {name:"Lima",country:"Peru",flag:"🇵🇪",tz:"America/Lima",cc:"PE"},
+  {name:"Accra",country:"Ghana",flag:"🇬🇭",tz:"Africa/Accra",cc:"GH"},
+  {name:"Kyiv",country:"Ukraine",flag:"🇺🇦",tz:"Europe/Kyiv",cc:"UA"},
+  {name:"Budapest",country:"Hungary",flag:"🇭🇺",tz:"Europe/Budapest",cc:"HU"},
+  {name:"Minsk",country:"Belarus",flag:"🇧🇾",tz:"Europe/Minsk",cc:"BY"},
+  {name:"Baku",country:"Azerbaijan",flag:"🇦🇿",tz:"Asia/Baku",cc:"AZ"},
+  {name:"Tashkent",country:"Uzbekistan",flag:"🇺🇿",tz:"Asia/Tashkent",cc:"UZ"},
+  {name:"Almaty",country:"Kazakhstan",flag:"🇰🇿",tz:"Asia/Almaty",cc:"KZ"},
+  {name:"Colombo",country:"Sri Lanka",flag:"🇱🇰",tz:"Asia/Colombo",cc:"LK"},
+  {name:"Islamabad",country:"Pakistan",flag:"🇵🇰",tz:"Asia/Karachi",cc:"PK"},
+  {name:"Lahore",country:"Pakistan",flag:"🇵🇰",tz:"Asia/Karachi",cc:"PK"},
+  {name:"Kathmandu",country:"Nepal",flag:"🇳🇵",tz:"Asia/Kathmandu",cc:"NP"},
+  {name:"Yangon",country:"Myanmar",flag:"🇲🇲",tz:"Asia/Rangoon",cc:"MM"},
+  {name:"Phnom Penh",country:"Cambodia",flag:"🇰🇭",tz:"Asia/Phnom_Penh",cc:"KH"},
+  {name:"Ulaanbaatar",country:"Mongolia",flag:"🇲🇳",tz:"Asia/Ulaanbaatar",cc:"MN"},
+  {name:"Tbilisi",country:"Georgia",flag:"🇬🇪",tz:"Asia/Tbilisi",cc:"GE"},
+  {name:"Yerevan",country:"Armenia",flag:"🇦🇲",tz:"Asia/Yerevan",cc:"AM"},
+  {name:"Beirut",country:"Lebanon",flag:"🇱🇧",tz:"Asia/Beirut",cc:"LB"},
+  {name:"Amman",country:"Jordan",flag:"🇯🇴",tz:"Asia/Amman",cc:"JO"},
+  {name:"Baghdad",country:"Iraq",flag:"🇮🇶",tz:"Asia/Baghdad",cc:"IQ"},
+  {name:"Muscat",country:"Oman",flag:"🇴🇲",tz:"Asia/Muscat",cc:"OM"},
+  {name:"Doha",country:"Qatar",flag:"🇶🇦",tz:"Asia/Qatar",cc:"QA"},
+  {name:"Kuwait City",country:"Kuwait",flag:"🇰🇼",tz:"Asia/Kuwait",cc:"KW"},
+  {name:"Manama",country:"Bahrain",flag:"🇧🇭",tz:"Asia/Bahrain",cc:"BH"},
+  {name:"Addis Ababa",country:"Ethiopia",flag:"🇪🇹",tz:"Africa/Addis_Ababa",cc:"ET"},
+  {name:"Khartoum",country:"Sudan",flag:"🇸🇩",tz:"Africa/Khartoum",cc:"SD"},
+  {name:"Dar es Salaam",country:"Tanzania",flag:"🇹🇿",tz:"Africa/Dar_es_Salaam",cc:"TZ"},
+  {name:"Kampala",country:"Uganda",flag:"🇺🇬",tz:"Africa/Kampala",cc:"UG"},
+  {name:"Dakar",country:"Senegal",flag:"🇸🇳",tz:"Africa/Dakar",cc:"SN"},
+  {name:"Abidjan",country:"Ivory Coast",flag:"🇨🇮",tz:"Africa/Abidjan",cc:"CI"},
+  {name:"Kinshasa",country:"DR Congo",flag:"🇨🇩",tz:"Africa/Kinshasa",cc:"CD"},
+  {name:"Luanda",country:"Angola",flag:"🇦🇴",tz:"Africa/Luanda",cc:"AO"},
+  {name:"Tunis",country:"Tunisia",flag:"🇹🇳",tz:"Africa/Tunis",cc:"TN"},
+  {name:"Algiers",country:"Algeria",flag:"🇩🇿",tz:"Africa/Algiers",cc:"DZ"},
+  {name:"Tripoli",country:"Libya",flag:"🇱🇾",tz:"Africa/Tripoli",cc:"LY"},
+  {name:"Rabat",country:"Morocco",flag:"🇲🇦",tz:"Africa/Casablanca",cc:"MA"},
+  {name:"Santiago",country:"Chile",flag:"🇨🇱",tz:"America/Santiago",cc:"CL"},
+  {name:"Caracas",country:"Venezuela",flag:"🇻🇪",tz:"America/Caracas",cc:"VE"},
+  {name:"Quito",country:"Ecuador",flag:"🇪🇨",tz:"America/Guayaquil",cc:"EC"},
+  {name:"Asunción",country:"Paraguay",flag:"🇵🇾",tz:"America/Asuncion",cc:"PY"},
+  {name:"Montevideo",country:"Uruguay",flag:"🇺🇾",tz:"America/Montevideo",cc:"UY"},
+  {name:"La Paz",country:"Bolivia",flag:"🇧🇴",tz:"America/La_Paz",cc:"BO"},
+  {name:"Panama City",country:"Panama",flag:"🇵🇦",tz:"America/Panama",cc:"PA"},
+  {name:"San José",country:"Costa Rica",flag:"🇨🇷",tz:"America/Costa_Rica",cc:"CR"},
+  {name:"Havana",country:"Cuba",flag:"🇨🇺",tz:"America/Havana",cc:"CU"},
+  {name:"Kingston",country:"Jamaica",flag:"🇯🇲",tz:"America/Jamaica",cc:"JM"},
+  {name:"Port of Spain",country:"Trinidad",flag:"🇹🇹",tz:"America/Port_of_Spain",cc:"TT"},
+  {name:"Reykjavik",country:"Iceland",flag:"🇮🇸",tz:"Atlantic/Reykjavik",cc:"IS"},
+  {name:"Valletta",country:"Malta",flag:"🇲🇹",tz:"Europe/Malta",cc:"MT"},
+  {name:"Nicosia",country:"Cyprus",flag:"🇨🇾",tz:"Asia/Nicosia",cc:"CY"},
+  {name:"Riga",country:"Latvia",flag:"🇱🇻",tz:"Europe/Riga",cc:"LV"},
+  {name:"Tallinn",country:"Estonia",flag:"🇪🇪",tz:"Europe/Tallinn",cc:"EE"},
+  {name:"Vilnius",country:"Lithuania",flag:"🇱🇹",tz:"Europe/Vilnius",cc:"LT"},
+  {name:"Bratislava",country:"Slovakia",flag:"🇸🇰",tz:"Europe/Bratislava",cc:"SK"},
+  {name:"Ljubljana",country:"Slovenia",flag:"🇸🇮",tz:"Europe/Ljubljana",cc:"SI"},
+  {name:"Zagreb",country:"Croatia",flag:"🇭🇷",tz:"Europe/Zagreb",cc:"HR"},
+  {name:"Sarajevo",country:"Bosnia",flag:"🇧🇦",tz:"Europe/Sarajevo",cc:"BA"},
+  {name:"Belgrade",country:"Serbia",flag:"🇷🇸",tz:"Europe/Belgrade",cc:"RS"},
+  {name:"Skopje",country:"North Macedonia",flag:"🇲🇰",tz:"Europe/Skopje",cc:"MK"},
+  {name:"Tirana",country:"Albania",flag:"🇦🇱",tz:"Europe/Tirane",cc:"AL"},
+  {name:"Podgorica",country:"Montenegro",flag:"🇲🇪",tz:"Europe/Podgorica",cc:"ME"},
+  {name:"Chisinau",country:"Moldova",flag:"🇲🇩",tz:"Europe/Chisinau",cc:"MD"},
+  {name:"Sofia",country:"Bulgaria",flag:"🇧🇬",tz:"Europe/Sofia",cc:"BG"},
+  {name:"Luxemburg",country:"Luxembourg",flag:"🇱🇺",tz:"Europe/Luxembourg",cc:"LU"},
+  {name:"Bern",country:"Switzerland",flag:"🇨🇭",tz:"Europe/Zurich",cc:"CH"},
+  {name:"Geneva",country:"Switzerland",flag:"🇨🇭",tz:"Europe/Zurich",cc:"CH"},
+  {name:"Porto",country:"Portugal",flag:"🇵🇹",tz:"Europe/Lisbon",cc:"PT"},
+  {name:"Seville",country:"Spain",flag:"🇪🇸",tz:"Europe/Madrid",cc:"ES"},
+  {name:"Barcelona",country:"Spain",flag:"🇪🇸",tz:"Europe/Madrid",cc:"ES"},
+  {name:"Lyon",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Hamburg",country:"Germany",flag:"🇩🇪",tz:"Europe/Berlin",cc:"DE"},
+  {name:"Munich",country:"Germany",flag:"🇩🇪",tz:"Europe/Berlin",cc:"DE"},
+  {name:"Frankfurt",country:"Germany",flag:"🇩🇪",tz:"Europe/Berlin",cc:"DE"},
+  {name:"Naples",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Turin",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Manchester",country:"United Kingdom",flag:"🇬🇧",tz:"Europe/London",cc:"GB"},
+  {name:"Edinburgh",country:"United Kingdom",flag:"🇬🇧",tz:"Europe/London",cc:"GB"},
+  {name:"Osaka",country:"Japan",flag:"🇯🇵",tz:"Asia/Tokyo",cc:"JP"},
+  {name:"Fukuoka",country:"Japan",flag:"🇯🇵",tz:"Asia/Tokyo",cc:"JP"},
+  {name:"Busan",country:"South Korea",flag:"🇰🇷",tz:"Asia/Seoul",cc:"KR"},
+  {name:"Guangzhou",country:"China",flag:"🇨🇳",tz:"Asia/Shanghai",cc:"CN"},
+  {name:"Shenzhen",country:"China",flag:"🇨🇳",tz:"Asia/Shanghai",cc:"CN"},
+  {name:"Chengdu",country:"China",flag:"🇨🇳",tz:"Asia/Shanghai",cc:"CN"},
+  {name:"Wuhan",country:"China",flag:"🇨🇳",tz:"Asia/Shanghai",cc:"CN"},
+  {name:"Hanoi",country:"Vietnam",flag:"🇻🇳",tz:"Asia/Ho_Chi_Minh",cc:"VN"},
+  {name:"Surabaya",country:"Indonesia",flag:"🇮🇩",tz:"Asia/Jakarta",cc:"ID"},
+  {name:"Bali",country:"Indonesia",flag:"🇮🇩",tz:"Asia/Makassar",cc:"ID"},
+  {name:"Manila",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Cebu",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Katowice",country:"Poland",flag:"🇵🇱",tz:"Europe/Warsaw",cc:"PL"},
+  {name:"Kraków",country:"Poland",flag:"🇵🇱",tz:"Europe/Warsaw",cc:"PL"},
+  {name:"Wrocław",country:"Poland",flag:"🇵🇱",tz:"Europe/Warsaw",cc:"PL"},
+  {name:"Boston",country:"United States",flag:"🇺🇸",tz:"America/New_York",cc:"US"},
+  {name:"Washington DC",country:"United States",flag:"🇺🇸",tz:"America/New_York",cc:"US"},
+  {name:"Houston",country:"United States",flag:"🇺🇸",tz:"America/Chicago",cc:"US"},
+  {name:"Dallas",country:"United States",flag:"🇺🇸",tz:"America/Chicago",cc:"US"},
+  {name:"Atlanta",country:"United States",flag:"🇺🇸",tz:"America/New_York",cc:"US"},
+  {name:"Seattle",country:"United States",flag:"🇺🇸",tz:"America/Los_Angeles",cc:"US"},
+  {name:"Las Vegas",country:"United States",flag:"🇺🇸",tz:"America/Los_Angeles",cc:"US"},
+  {name:"Phoenix",country:"United States",flag:"🇺🇸",tz:"America/Phoenix",cc:"US"},
+  {name:"Minneapolis",country:"United States",flag:"🇺🇸",tz:"America/Chicago",cc:"US"},
+  {name:"Montreal",country:"Canada",flag:"🇨🇦",tz:"America/Montreal",cc:"CA"},
+  {name:"Calgary",country:"Canada",flag:"🇨🇦",tz:"America/Edmonton",cc:"CA"},
+  {name:"Brisbane",country:"Australia",flag:"🇦🇺",tz:"Australia/Brisbane",cc:"AU"},
+  {name:"Adelaide",country:"Australia",flag:"🇦🇺",tz:"Australia/Adelaide",cc:"AU"},
+  {name:"Gold Coast",country:"Australia",flag:"🇦🇺",tz:"Australia/Brisbane",cc:"AU"},
+  {name:"Wellington",country:"New Zealand",flag:"🇳🇿",tz:"Pacific/Auckland",cc:"NZ"},
+  {name:"Christchurch",country:"New Zealand",flag:"🇳🇿",tz:"Pacific/Auckland",cc:"NZ"},
+  {name:"Suva",country:"Fiji",flag:"🇫🇯",tz:"Pacific/Fiji",cc:"FJ"},
+  {name:"Honolulu",country:"United States",flag:"🇺🇸",tz:"Pacific/Honolulu",cc:"US"},
+  {name:"Anchorage",country:"United States",flag:"🇺🇸",tz:"America/Anchorage",cc:"US"},
+  // ── SOUTH AFRICA (major BPO hub) ──
+  {name:"Durban",country:"South Africa",flag:"🇿🇦",tz:"Africa/Johannesburg",cc:"ZA"},
+  {name:"Cape Town",country:"South Africa",flag:"🇿🇦",tz:"Africa/Johannesburg",cc:"ZA"},
+  {name:"Pretoria",country:"South Africa",flag:"🇿🇦",tz:"Africa/Johannesburg",cc:"ZA"},
+  {name:"Port Elizabeth",country:"South Africa",flag:"🇿🇦",tz:"Africa/Johannesburg",cc:"ZA"},
+  {name:"East London",country:"South Africa",flag:"🇿🇦",tz:"Africa/Johannesburg",cc:"ZA"},
+  // ── PHILIPPINES (largest CS/BPO market globally) ──
+  {name:"Manila",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Cebu City",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Davao",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Quezon City",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Makati",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Clark",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Iloilo",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Bacolod",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  // ── INDIA (tier-1 & tier-2 BPO cities) ──
+  {name:"Bangalore",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Hyderabad",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Chennai",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Pune",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Kolkata",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Ahmedabad",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Jaipur",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Chandigarh",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Noida",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Gurgaon",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Coimbatore",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Kochi",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Indore",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Nagpur",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  // ── EASTERN EUROPE (growing CS/BPO destinations) ──
+  {name:"Kraków",country:"Poland",flag:"🇵🇱",tz:"Europe/Warsaw",cc:"PL"},
+  {name:"Wrocław",country:"Poland",flag:"🇵🇱",tz:"Europe/Warsaw",cc:"PL"},
+  {name:"Łódź",country:"Poland",flag:"🇵🇱",tz:"Europe/Warsaw",cc:"PL"},
+  {name:"Gdańsk",country:"Poland",flag:"🇵🇱",tz:"Europe/Warsaw",cc:"PL"},
+  {name:"Cluj-Napoca",country:"Romania",flag:"🇷🇴",tz:"Europe/Bucharest",cc:"RO"},
+  {name:"Timișoara",country:"Romania",flag:"🇷🇴",tz:"Europe/Bucharest",cc:"RO"},
+  {name:"Iași",country:"Romania",flag:"🇷🇴",tz:"Europe/Bucharest",cc:"RO"},
+  {name:"Brașov",country:"Romania",flag:"🇷🇴",tz:"Europe/Bucharest",cc:"RO"},
+  {name:"Brno",country:"Czech Republic",flag:"🇨🇿",tz:"Europe/Prague",cc:"CZ"},
+  {name:"Ostrava",country:"Czech Republic",flag:"🇨🇿",tz:"Europe/Prague",cc:"CZ"},
+  {name:"Lviv",country:"Ukraine",flag:"🇺🇦",tz:"Europe/Kyiv",cc:"UA"},
+  {name:"Kharkiv",country:"Ukraine",flag:"🇺🇦",tz:"Europe/Kyiv",cc:"UA"},
+  {name:"Dnipro",country:"Ukraine",flag:"🇺🇦",tz:"Europe/Kyiv",cc:"UA"},
+  {name:"Sofia",country:"Bulgaria",flag:"🇧🇬",tz:"Europe/Sofia",cc:"BG"},
+  {name:"Plovdiv",country:"Bulgaria",flag:"🇧🇬",tz:"Europe/Sofia",cc:"BG"},
+  {name:"Skopje",country:"North Macedonia",flag:"🇲🇰",tz:"Europe/Skopje",cc:"MK"},
+  {name:"Sarajevo",country:"Bosnia",flag:"🇧🇦",tz:"Europe/Sarajevo",cc:"BA"},
+  {name:"Tirana",country:"Albania",flag:"🇦🇱",tz:"Europe/Tirane",cc:"AL"},
+  {name:"Novi Sad",country:"Serbia",flag:"🇷🇸",tz:"Europe/Belgrade",cc:"RS"},
+  // ── NORTH AFRICA & LEVANT ──
+  {name:"Tunis",country:"Tunisia",flag:"🇹🇳",tz:"Africa/Tunis",cc:"TN"},
+  {name:"Sfax",country:"Tunisia",flag:"🇹🇳",tz:"Africa/Tunis",cc:"TN"},
+  {name:"Sousse",country:"Tunisia",flag:"🇹🇳",tz:"Africa/Tunis",cc:"TN"},
+  {name:"Casablanca",country:"Morocco",flag:"🇲🇦",tz:"Africa/Casablanca",cc:"MA"},
+  {name:"Rabat",country:"Morocco",flag:"🇲🇦",tz:"Africa/Casablanca",cc:"MA"},
+  {name:"Fès",country:"Morocco",flag:"🇲🇦",tz:"Africa/Casablanca",cc:"MA"},
+  {name:"Marrakech",country:"Morocco",flag:"🇲🇦",tz:"Africa/Casablanca",cc:"MA"},
+  {name:"Algiers",country:"Algeria",flag:"🇩🇿",tz:"Africa/Algiers",cc:"DZ"},
+  {name:"Oran",country:"Algeria",flag:"🇩🇿",tz:"Africa/Algiers",cc:"DZ"},
+  // ── LATAM BPO HUBS ──
+  {name:"Bogotá",country:"Colombia",flag:"🇨🇴",tz:"America/Bogota",cc:"CO"},
+  {name:"Medellín",country:"Colombia",flag:"🇨🇴",tz:"America/Bogota",cc:"CO"},
+  {name:"Cali",country:"Colombia",flag:"🇨🇴",tz:"America/Bogota",cc:"CO"},
+  {name:"Barranquilla",country:"Colombia",flag:"🇨🇴",tz:"America/Bogota",cc:"CO"},
+  {name:"Lima",country:"Peru",flag:"🇵🇪",tz:"America/Lima",cc:"PE"},
+  {name:"Arequipa",country:"Peru",flag:"🇵🇪",tz:"America/Lima",cc:"PE"},
+  {name:"Guatemala City",country:"Guatemala",flag:"🇬🇹",tz:"America/Guatemala",cc:"GT"},
+  {name:"San Salvador",country:"El Salvador",flag:"🇸🇻",tz:"America/El_Salvador",cc:"SV"},
+  {name:"Tegucigalpa",country:"Honduras",flag:"🇭🇳",tz:"America/Tegucigalpa",cc:"HN"},
+  {name:"Santo Domingo",country:"Dominican Republic",flag:"🇩🇴",tz:"America/Santo_Domingo",cc:"DO"},
+  {name:"Santiago",country:"Chile",flag:"🇨🇱",tz:"America/Santiago",cc:"CL"},
+  {name:"Buenos Aires",country:"Argentina",flag:"🇦🇷",tz:"America/Argentina/Buenos_Aires",cc:"AR"},
+  {name:"Córdoba",country:"Argentina",flag:"🇦🇷",tz:"America/Argentina/Cordoba",cc:"AR"},
+  {name:"Rosario",country:"Argentina",flag:"🇦🇷",tz:"America/Argentina/Cordoba",cc:"AR"},
+  {name:"Montevideo",country:"Uruguay",flag:"🇺🇾",tz:"America/Montevideo",cc:"UY"},
+  {name:"São Paulo",country:"Brazil",flag:"🇧🇷",tz:"America/Sao_Paulo",cc:"BR"},
+  {name:"Recife",country:"Brazil",flag:"🇧🇷",tz:"America/Recife",cc:"BR"},
+  {name:"Fortaleza",country:"Brazil",flag:"🇧🇷",tz:"America/Fortaleza",cc:"BR"},
+  {name:"Belo Horizonte",country:"Brazil",flag:"🇧🇷",tz:"America/Sao_Paulo",cc:"BR"},
+  {name:"Porto Alegre",country:"Brazil",flag:"🇧🇷",tz:"America/Sao_Paulo",cc:"BR"},
+  // ── SUB-SAHARAN AFRICA ──
+  {name:"Nairobi",country:"Kenya",flag:"🇰🇪",tz:"Africa/Nairobi",cc:"KE"},
+  {name:"Kampala",country:"Uganda",flag:"🇺🇬",tz:"Africa/Kampala",cc:"UG"},
+  {name:"Dar es Salaam",country:"Tanzania",flag:"🇹🇿",tz:"Africa/Dar_es_Salaam",cc:"TZ"},
+  {name:"Lagos",country:"Nigeria",flag:"🇳🇬",tz:"Africa/Lagos",cc:"NG"},
+  {name:"Abuja",country:"Nigeria",flag:"🇳🇬",tz:"Africa/Lagos",cc:"NG"},
+  {name:"Accra",country:"Ghana",flag:"🇬🇭",tz:"Africa/Accra",cc:"GH"},
+  {name:"Dakar",country:"Senegal",flag:"🇸🇳",tz:"Africa/Dakar",cc:"SN"},
+  {name:"Abidjan",country:"Ivory Coast",flag:"🇨🇮",tz:"Africa/Abidjan",cc:"CI"},
+  {name:"Douala",country:"Cameroon",flag:"🇨🇲",tz:"Africa/Douala",cc:"CM"},
+  {name:"Addis Ababa",country:"Ethiopia",flag:"🇪🇹",tz:"Africa/Addis_Ababa",cc:"ET"},
+  {name:"Kigali",country:"Rwanda",flag:"🇷🇼",tz:"Africa/Kigali",cc:"RW"},
+  {name:"Lusaka",country:"Zambia",flag:"🇿🇲",tz:"Africa/Lusaka",cc:"ZM"},
+  {name:"Harare",country:"Zimbabwe",flag:"🇿🇼",tz:"Africa/Harare",cc:"ZW"},
+  // ── SOUTHEAST ASIA ──
+  {name:"Kuala Lumpur",country:"Malaysia",flag:"🇲🇾",tz:"Asia/Kuala_Lumpur",cc:"MY"},
+  {name:"Penang",country:"Malaysia",flag:"🇲🇾",tz:"Asia/Kuala_Lumpur",cc:"MY"},
+  {name:"Johor Bahru",country:"Malaysia",flag:"🇲🇾",tz:"Asia/Kuala_Lumpur",cc:"MY"},
+  {name:"Bangkok",country:"Thailand",flag:"🇹🇭",tz:"Asia/Bangkok",cc:"TH"},
+  {name:"Chiang Mai",country:"Thailand",flag:"🇹🇭",tz:"Asia/Bangkok",cc:"TH"},
+  {name:"Ho Chi Minh City",country:"Vietnam",flag:"🇻🇳",tz:"Asia/Ho_Chi_Minh",cc:"VN"},
+  {name:"Hanoi",country:"Vietnam",flag:"🇻🇳",tz:"Asia/Ho_Chi_Minh",cc:"VN"},
+  {name:"Da Nang",country:"Vietnam",flag:"🇻🇳",tz:"Asia/Ho_Chi_Minh",cc:"VN"},
+  {name:"Phnom Penh",country:"Cambodia",flag:"🇰🇭",tz:"Asia/Phnom_Penh",cc:"KH"},
+  {name:"Yangon",country:"Myanmar",flag:"🇲🇲",tz:"Asia/Rangoon",cc:"MM"},
+  {name:"Jakarta",country:"Indonesia",flag:"🇮🇩",tz:"Asia/Jakarta",cc:"ID"},
+  {name:"Surabaya",country:"Indonesia",flag:"🇮🇩",tz:"Asia/Jakarta",cc:"ID"},
+  {name:"Bandung",country:"Indonesia",flag:"🇮🇩",tz:"Asia/Jakarta",cc:"ID"},
+  {name:"Bali",country:"Indonesia",flag:"🇮🇩",tz:"Asia/Makassar",cc:"ID"},
+  // ── MIDDLE EAST CS HUBS ──
+  {name:"Amman",country:"Jordan",flag:"🇯🇴",tz:"Asia/Amman",cc:"JO"},
+  {name:"Beirut",country:"Lebanon",flag:"🇱🇧",tz:"Asia/Beirut",cc:"LB"},
+  {name:"Cairo",country:"Egypt",flag:"🇪🇬",tz:"Africa/Cairo",cc:"EG"},
+  {name:"Alexandria",country:"Egypt",flag:"🇪🇬",tz:"Africa/Cairo",cc:"EG"},
+  {name:"Dubai",country:"UAE",flag:"🇦🇪",tz:"Asia/Dubai",cc:"AE"},
+  {name:"Abu Dhabi",country:"UAE",flag:"🇦🇪",tz:"Asia/Dubai",cc:"AE"},
+  // ── CONCENTRIX / WEBHELP SPECIFIC LOCATIONS ──
+  // Suriname
+  {name:"Paramaribo",country:"Suriname",flag:"🇸🇷",tz:"America/Paramaribo",cc:"SR"},
+  // Madagascar
+  {name:"Antananarivo",country:"Madagascar",flag:"🇲🇬",tz:"Indian/Antananarivo",cc:"MG"},
+  // Mauritius
+  {name:"Port Louis",country:"Mauritius",flag:"🇲🇺",tz:"Indian/Mauritius",cc:"MU"},
+  {name:"Ebène",country:"Mauritius",flag:"🇲🇺",tz:"Indian/Mauritius",cc:"MU"},
+  // Turkey (Webhelp/Concentrix confirmed)
+  {name:"Ankara",country:"Turkey",flag:"🇹🇷",tz:"Europe/Istanbul",cc:"TR"},
+  {name:"İzmir",country:"Turkey",flag:"🇹🇷",tz:"Europe/Istanbul",cc:"TR"},
+  {name:"Bingöl",country:"Turkey",flag:"🇹🇷",tz:"Europe/Istanbul",cc:"TR"},
+  {name:"Bursa",country:"Turkey",flag:"🇹🇷",tz:"Europe/Istanbul",cc:"TR"},
+  // Kosovo (Concentrix confirmed sites)
+  {name:"Pristina",country:"Kosovo",flag:"🇽🇰",tz:"Europe/Belgrade",cc:"XK"},
+  {name:"Ferizaj",country:"Kosovo",flag:"🇽🇰",tz:"Europe/Belgrade",cc:"XK"},
+  {name:"Gjilan",country:"Kosovo",flag:"🇽🇰",tz:"Europe/Belgrade",cc:"XK"},
+  {name:"Mitrovica",country:"Kosovo",flag:"🇽🇰",tz:"Europe/Belgrade",cc:"XK"},
+  // Jamaica
+  {name:"Kingston",country:"Jamaica",flag:"🇯🇲",tz:"America/Jamaica",cc:"JM"},
+  {name:"Montego Bay",country:"Jamaica",flag:"🇯🇲",tz:"America/Jamaica",cc:"JM"},
+  // Nicaragua
+  {name:"Managua",country:"Nicaragua",flag:"🇳🇮",tz:"America/Managua",cc:"NI"},
+  // Honduras
+  {name:"San Pedro Sula",country:"Honduras",flag:"🇭🇳",tz:"America/Tegucigalpa",cc:"HN"},
+  // New Zealand
+  {name:"Auckland",country:"New Zealand",flag:"🇳🇿",tz:"Pacific/Auckland",cc:"NZ"},
+  {name:"Wellington",country:"New Zealand",flag:"🇳🇿",tz:"Pacific/Auckland",cc:"NZ"},
+  // Germany (Webhelp/Concentrix confirmed)
+  {name:"Nuremberg",country:"Germany",flag:"🇩🇪",tz:"Europe/Berlin",cc:"DE"},
+  {name:"Leipzig",country:"Germany",flag:"🇩🇪",tz:"Europe/Berlin",cc:"DE"},
+  {name:"Dresden",country:"Germany",flag:"🇩🇪",tz:"Europe/Berlin",cc:"DE"},
+  {name:"Dortmund",country:"Germany",flag:"🇩🇪",tz:"Europe/Berlin",cc:"DE"},
+  {name:"Essen",country:"Germany",flag:"🇩🇪",tz:"Europe/Berlin",cc:"DE"},
+  {name:"Düsseldorf",country:"Germany",flag:"🇩🇪",tz:"Europe/Berlin",cc:"DE"},
+  {name:"Cologne",country:"Germany",flag:"🇩🇪",tz:"Europe/Berlin",cc:"DE"},
+  {name:"Stuttgart",country:"Germany",flag:"🇩🇪",tz:"Europe/Berlin",cc:"DE"},
+  // UK (Concentrix confirmed)
+  {name:"Newcastle",country:"United Kingdom",flag:"🇬🇧",tz:"Europe/London",cc:"GB"},
+  {name:"Belfast",country:"United Kingdom",flag:"🇬🇧",tz:"Europe/London",cc:"GB"},
+  {name:"Brentford",country:"United Kingdom",flag:"🇬🇧",tz:"Europe/London",cc:"GB"},
+  {name:"Greenock",country:"United Kingdom",flag:"🇬🇧",tz:"Europe/London",cc:"GB"},
+  // Portugal (Webhelp confirmed)
+  {name:"Braga",country:"Portugal",flag:"🇵🇹",tz:"Europe/Lisbon",cc:"PT"},
+  {name:"Aveiro",country:"Portugal",flag:"🇵🇹",tz:"Europe/Lisbon",cc:"PT"},
+  {name:"Coimbra",country:"Portugal",flag:"🇵🇹",tz:"Europe/Lisbon",cc:"PT"},
+  // Spain (Webhelp confirmed)
+  {name:"Benalmádena",country:"Spain",flag:"🇪🇸",tz:"Europe/Madrid",cc:"ES"},
+  {name:"Málaga",country:"Spain",flag:"🇪🇸",tz:"Europe/Madrid",cc:"ES"},
+  {name:"Zaragoza",country:"Spain",flag:"🇪🇸",tz:"Europe/Madrid",cc:"ES"},
+  {name:"Bilbao",country:"Spain",flag:"🇪🇸",tz:"Europe/Madrid",cc:"ES"},
+  {name:"Valencia",country:"Spain",flag:"🇪🇸",tz:"Europe/Madrid",cc:"ES"},
+  {name:"Mérida",country:"Mexico",flag:"🇲🇽",tz:"America/Merida",cc:"MX"},
+  {name:"Chihuahua",country:"Mexico",flag:"🇲🇽",tz:"America/Chihuahua",cc:"MX"},
+  {name:"Monterrey",country:"Mexico",flag:"🇲🇽",tz:"America/Monterrey",cc:"MX"},
+  {name:"Guadalajara",country:"Mexico",flag:"🇲🇽",tz:"America/Mexico_City",cc:"MX"},
+  {name:"Tijuana",country:"Mexico",flag:"🇲🇽",tz:"America/Tijuana",cc:"MX"},
+  // Philippines (all confirmed Concentrix sites)
+  {name:"Alabang",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Mandaluyong",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Taguig",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Pasay",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Baguio",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Cagayan de Oro",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Naga",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  {name:"Valenzuela",country:"Philippines",flag:"🇵🇭",tz:"Asia/Manila",cc:"PH"},
+  // India (additional Concentrix confirmed)
+  {name:"Bhubaneswar",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Vizag",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Mysore",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Vadodara",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Bhopal",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Trivandrum",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  {name:"Mangalore",country:"India",flag:"🇮🇳",tz:"Asia/Kolkata",cc:"IN"},
+  // China (Glassdoor confirmed)
+  {name:"Foshan",country:"China",flag:"🇨🇳",tz:"Asia/Shanghai",cc:"CN"},
+  {name:"Chongqing",country:"China",flag:"🇨🇳",tz:"Asia/Shanghai",cc:"CN"},
+  {name:"Nanjing",country:"China",flag:"🇨🇳",tz:"Asia/Shanghai",cc:"CN"},
+  {name:"Tianjin",country:"China",flag:"🇨🇳",tz:"Asia/Shanghai",cc:"CN"},
+  {name:"Dalian",country:"China",flag:"🇨🇳",tz:"Asia/Shanghai",cc:"CN"},
+  {name:"Xi'an",country:"China",flag:"🇨🇳",tz:"Asia/Shanghai",cc:"CN"},
+  // Japan (Concentrix confirmed: Tokyo, Fukuoka)
+  {name:"Fukuoka",country:"Japan",flag:"🇯🇵",tz:"Asia/Tokyo",cc:"JP"},
+  {name:"Nagoya",country:"Japan",flag:"🇯🇵",tz:"Asia/Tokyo",cc:"JP"},
+  {name:"Sapporo",country:"Japan",flag:"🇯🇵",tz:"Asia/Tokyo",cc:"JP"},
+  // Korea
+  {name:"Incheon",country:"South Korea",flag:"🇰🇷",tz:"Asia/Seoul",cc:"KR"},
+  // El Salvador
+  {name:"Antiguo Cuscatlán",country:"El Salvador",flag:"🇸🇻",tz:"America/El_Salvador",cc:"SV"},
+  // Greece (Webhelp confirmed)
+  {name:"Thessaloniki",country:"Greece",flag:"🇬🇷",tz:"Europe/Athens",cc:"GR"},
+  {name:"Patras",country:"Greece",flag:"🇬🇷",tz:"Europe/Athens",cc:"GR"},
+  // Sweden (Webhelp confirmed)
+  {name:"Gothenburg",country:"Sweden",flag:"🇸🇪",tz:"Europe/Stockholm",cc:"SE"},
+  {name:"Malmö",country:"Sweden",flag:"🇸🇪",tz:"Europe/Stockholm",cc:"SE"},
+  // Norway
+  {name:"Bergen",country:"Norway",flag:"🇳🇴",tz:"Europe/Oslo",cc:"NO"},
+  // Finland
+  {name:"Tampere",country:"Finland",flag:"🇫🇮",tz:"Europe/Helsinki",cc:"FI"},
+  // Netherlands
+  {name:"Rotterdam",country:"Netherlands",flag:"🇳🇱",tz:"Europe/Amsterdam",cc:"NL"},
+  {name:"Eindhoven",country:"Netherlands",flag:"🇳🇱",tz:"Europe/Amsterdam",cc:"NL"},
+  {name:"Utrecht",country:"Netherlands",flag:"🇳🇱",tz:"Europe/Amsterdam",cc:"NL"},
+  // Belgium
+  {name:"Antwerp",country:"Belgium",flag:"🇧🇪",tz:"Europe/Brussels",cc:"BE"},
+  {name:"Ghent",country:"Belgium",flag:"🇧🇪",tz:"Europe/Brussels",cc:"BE"},
+  {name:"Liège",country:"Belgium",flag:"🇧🇪",tz:"Europe/Brussels",cc:"BE"},
+  // France (Webhelp HQ + confirmed sites)
+  {name:"Dijon",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Bordeaux",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Toulouse",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Marseille",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Nantes",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Strasbourg",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Rennes",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Grenoble",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Caen",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Rouen",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Montpellier",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Nice",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  {name:"Lille",country:"France",flag:"🇫🇷",tz:"Europe/Paris",cc:"FR"},
+  // Italy (Concentrix confirmed)
+  {name:"Pescara",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Cagliari",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Palermo",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Bologna",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Florence",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Bari",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Catania",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Genoa",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Venice",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  {name:"Verona",country:"Italy",flag:"🇮🇹",tz:"Europe/Rome",cc:"IT"},
+  // Georgia (country - Webhelp confirmed)
+  {name:"Tbilisi",country:"Georgia",flag:"🇬🇪",tz:"Asia/Tbilisi",cc:"GE"},
+  {name:"Batumi",country:"Georgia",flag:"🇬🇪",tz:"Asia/Tbilisi",cc:"GE"},
+  // Armenia (Webhelp confirmed)
+  {name:"Yerevan",country:"Armenia",flag:"🇦🇲",tz:"Asia/Yerevan",cc:"AM"},
+  // Latvia (Webhelp confirmed)
+  {name:"Riga",country:"Latvia",flag:"🇱🇻",tz:"Europe/Riga",cc:"LV"},
+  {name:"Daugavpils",country:"Latvia",flag:"🇱🇻",tz:"Europe/Riga",cc:"LV"},
+  // Lithuania (Webhelp confirmed)
+  {name:"Vilnius",country:"Lithuania",flag:"🇱🇹",tz:"Europe/Vilnius",cc:"LT"},
+  {name:"Kaunas",country:"Lithuania",flag:"🇱🇹",tz:"Europe/Vilnius",cc:"LT"},
+  // Senegal (Webhelp confirmed)
+  {name:"Dakar",country:"Senegal",flag:"🇸🇳",tz:"Africa/Dakar",cc:"SN"},
+  {name:"Saint-Louis",country:"Senegal",flag:"🇸🇳",tz:"Africa/Dakar",cc:"SN"},
+  // Ivory Coast (Webhelp confirmed)
+  {name:"Abidjan",country:"Ivory Coast",flag:"🇨🇮",tz:"Africa/Abidjan",cc:"CI"},
+  // Ghana (Webhelp confirmed)
+  {name:"Accra",country:"Ghana",flag:"🇬🇭",tz:"Africa/Accra",cc:"GH"},
+  // Cameroon
+  {name:"Yaoundé",country:"Cameroon",flag:"🇨🇲",tz:"Africa/Douala",cc:"CM"},
+  // Rwanda (Webhelp confirmed)
+  {name:"Kigali",country:"Rwanda",flag:"🇷🇼",tz:"Africa/Kigali",cc:"RW"},
+  // Morocco (Webhelp major hub)
+  {name:"Oujda",country:"Morocco",flag:"🇲🇦",tz:"Africa/Casablanca",cc:"MA"},
+  {name:"Agadir",country:"Morocco",flag:"🇲🇦",tz:"Africa/Casablanca",cc:"MA"},
+  {name:"Tanger",country:"Morocco",flag:"🇲🇦",tz:"Africa/Casablanca",cc:"MA"},
+  {name:"Meknes",country:"Morocco",flag:"🇲🇦",tz:"Africa/Casablanca",cc:"MA"},
+  // Tunisia (Webhelp/Concentrix confirmed)
+  {name:"Tunis",country:"Tunisia",flag:"🇹🇳",tz:"Africa/Tunis",cc:"TN"},
+  {name:"Sousse",country:"Tunisia",flag:"🇹🇳",tz:"Africa/Tunis",cc:"TN"},
+  {name:"Sfax",country:"Tunisia",flag:"🇹🇳",tz:"Africa/Tunis",cc:"TN"},
+  {name:"Bizerte",country:"Tunisia",flag:"🇹🇳",tz:"Africa/Tunis",cc:"TN"},
+  // Jordan (Webhelp confirmed)
+  {name:"Amman",country:"Jordan",flag:"🇯🇴",tz:"Asia/Amman",cc:"JO"},
+  // Hungary (Webhelp confirmed)
+  {name:"Budapest",country:"Hungary",flag:"🇭🇺",tz:"Europe/Budapest",cc:"HU"},
+  {name:"Debrecen",country:"Hungary",flag:"🇭🇺",tz:"Europe/Budapest",cc:"HU"},
+  // Slovakia (Webhelp confirmed)
+  {name:"Bratislava",country:"Slovakia",flag:"🇸🇰",tz:"Europe/Bratislava",cc:"SK"},
+  {name:"Košice",country:"Slovakia",flag:"🇸🇰",tz:"Europe/Bratislava",cc:"SK"},
+  // North Macedonia (Webhelp confirmed)
+  {name:"Bitola",country:"North Macedonia",flag:"🇲🇰",tz:"Europe/Skopje",cc:"MK"},
+  // Serbia (Concentrix confirmed)
+  {name:"Belgrade",country:"Serbia",flag:"🇷🇸",tz:"Europe/Belgrade",cc:"RS"},
+  {name:"Novi Sad",country:"Serbia",flag:"🇷🇸",tz:"Europe/Belgrade",cc:"RS"},
+  {name:"Niš",country:"Serbia",flag:"🇷🇸",tz:"Europe/Belgrade",cc:"RS"},
+  // Indonesia (Concentrix confirmed)
+  {name:"Medan",country:"Indonesia",flag:"🇮🇩",tz:"Asia/Jakarta",cc:"ID"},
+  {name:"Semarang",country:"Indonesia",flag:"🇮🇩",tz:"Asia/Jakarta",cc:"ID"},
+  {name:"Makassar",country:"Indonesia",flag:"🇮🇩",tz:"Asia/Makassar",cc:"ID"},
+  // Vietnam (additional)
+  {name:"Can Tho",country:"Vietnam",flag:"🇻🇳",tz:"Asia/Ho_Chi_Minh",cc:"VN"},
+  // US (additional Concentrix confirmed)
+  {name:"Chesterfield",country:"United States",flag:"🇺🇸",tz:"America/Chicago",cc:"US"},
+  {name:"Tempe",country:"United States",flag:"🇺🇸",tz:"America/Phoenix",cc:"US"},
+  {name:"San Antonio",country:"United States",flag:"🇺🇸",tz:"America/Chicago",cc:"US"},
+  {name:"Portland",country:"United States",flag:"🇺🇸",tz:"America/Los_Angeles",cc:"US"},
+  {name:"San Diego",country:"United States",flag:"🇺🇸",tz:"America/Los_Angeles",cc:"US"},
+  {name:"Philadelphia",country:"United States",flag:"🇺🇸",tz:"America/New_York",cc:"US"},
+  {name:"Newark",country:"United States",flag:"🇺🇸",tz:"America/New_York",cc:"US"},
+  // Benin
+  {name:"Cotonou",country:"Benin",flag:"🇧🇯",tz:"Africa/Porto-Novo",cc:"BJ"},
+  {name:"Porto-Novo",country:"Benin",flag:"🇧🇯",tz:"Africa/Porto-Novo",cc:"BJ"},
+];
+
+// ═══════════════════════════════════════════════════
+// WEEKEND RULES
+// Countries where weekend = Fri+Sat
+const FRI_SAT_WEEKEND = new Set(['AE','SA','EG','IQ','KW','QA','BH','OM','YE','JO','LY','SD']);
+// Countries where weekend = Fri only (some Islamic)
+const FRI_ONLY_WEEKEND = new Set(['IR','AF']);
+// Israel: Fri+Sat (Shabbat)
+const IL_WEEKEND = new Set(['IL']);
+// Default: Sat+Sun
+
+function isWeekend(cc, jsDay) {
+  // jsDay: 0=Sun,1=Mon,...,5=Fri,6=Sat
+  if (FRI_SAT_WEEKEND.has(cc)) return jsDay === 5 || jsDay === 6;
+  if (IL_WEEKEND.has(cc)) return jsDay === 5 || jsDay === 6;
+  if (FRI_ONLY_WEEKEND.has(cc)) return jsDay === 5;
+  return jsDay === 0 || jsDay === 6; // Sat+Sun default
+}
+
+// ═══════════════════════════════════════════════════
+// BANK HOLIDAYS (key = "CC:YYYY-MM-DD")
+const BH = new Set([
+  // Italy 2025-2026
+  'IT:2025-01-01','IT:2025-01-06','IT:2025-04-18','IT:2025-04-20','IT:2025-04-21','IT:2025-04-25',
+  'IT:2025-05-01','IT:2025-06-02','IT:2025-08-15','IT:2025-11-01','IT:2025-12-08','IT:2025-12-25','IT:2025-12-26',
+  'IT:2026-01-01','IT:2026-01-06','IT:2026-04-03','IT:2026-04-05','IT:2026-04-06','IT:2026-04-25',
+  'IT:2026-05-01','IT:2026-06-02','IT:2026-08-15','IT:2026-11-01','IT:2026-12-08','IT:2026-12-25','IT:2026-12-26',
+  // UK 2025-2026
+  'GB:2025-01-01','GB:2025-04-18','GB:2025-04-21','GB:2025-05-05','GB:2025-05-26','GB:2025-08-25','GB:2025-12-25','GB:2025-12-26',
+  'GB:2026-01-01','GB:2026-04-03','GB:2026-04-06','GB:2026-05-04','GB:2026-05-25','GB:2026-08-31','GB:2026-12-25','GB:2026-12-28',
+  // Ireland 2025-2026
+  'IE:2025-01-01','IE:2025-02-03','IE:2025-03-17','IE:2025-04-18','IE:2025-04-21','IE:2025-05-05',
+  'IE:2025-06-02','IE:2025-08-04','IE:2025-10-27','IE:2025-12-25','IE:2025-12-26',
+  'IE:2026-01-01','IE:2026-02-02','IE:2026-03-17','IE:2026-04-03','IE:2026-04-06','IE:2026-05-04',
+  'IE:2026-06-01','IE:2026-08-03','IE:2026-10-26','IE:2026-12-25','IE:2026-12-28',
+  // Netherlands 2025-2026
+  'NL:2025-01-01','NL:2025-04-18','NL:2025-04-20','NL:2025-04-21','NL:2025-04-27','NL:2025-05-05',
+  'NL:2025-05-29','NL:2025-06-08','NL:2025-06-09','NL:2025-12-25','NL:2025-12-26',
+  'NL:2026-01-01','NL:2026-04-03','NL:2026-04-05','NL:2026-04-06','NL:2026-04-27','NL:2026-05-05',
+  'NL:2026-05-14','NL:2026-05-24','NL:2026-05-25','NL:2026-12-25','NL:2026-12-26',
+  // Germany 2025-2026
+  'DE:2025-01-01','DE:2025-04-18','DE:2025-04-21','DE:2025-05-01','DE:2025-05-29','DE:2025-06-09',
+  'DE:2025-10-03','DE:2025-12-25','DE:2025-12-26',
+  'DE:2026-01-01','DE:2026-04-03','DE:2026-04-06','DE:2026-05-01','DE:2026-05-14','DE:2026-05-25',
+  'DE:2026-10-03','DE:2026-12-25','DE:2026-12-26',
+  // France 2025-2026
+  'FR:2025-01-01','FR:2025-04-18','FR:2025-04-21','FR:2025-05-01','FR:2025-05-08','FR:2025-05-29',
+  'FR:2025-06-09','FR:2025-07-14','FR:2025-08-15','FR:2025-11-01','FR:2025-11-11','FR:2025-12-25',
+  'FR:2026-01-01','FR:2026-04-03','FR:2026-04-06','FR:2026-05-01','FR:2026-05-08','FR:2026-05-14',
+  'FR:2026-05-25','FR:2026-07-14','FR:2026-08-15','FR:2026-11-01','FR:2026-11-11','FR:2026-12-25',
+  // Romania 2025-2026
+  'RO:2025-01-01','RO:2025-01-02','RO:2025-01-24','RO:2025-04-18','RO:2025-04-20','RO:2025-04-21',
+  'RO:2025-05-01','RO:2025-06-01','RO:2025-06-08','RO:2025-06-09','RO:2025-08-15',
+  'RO:2025-11-30','RO:2025-12-01','RO:2025-12-25','RO:2025-12-26',
+  'RO:2026-01-01','RO:2026-01-02','RO:2026-01-24','RO:2026-04-10','RO:2026-04-12','RO:2026-04-13',
+  'RO:2026-05-01','RO:2026-06-01','RO:2026-05-31','RO:2026-06-01','RO:2026-08-15',
+  'RO:2026-11-30','RO:2026-12-01','RO:2026-12-25','RO:2026-12-26',
+  // Egypt 2025-2026 (approximate - Islamic dates shift)
+  'EG:2025-01-07','EG:2025-04-25','EG:2025-05-01','EG:2025-06-30','EG:2025-07-23','EG:2025-10-06',
+  'EG:2026-01-07','EG:2026-04-25','EG:2026-05-01','EG:2026-06-30','EG:2026-07-23','EG:2026-10-06',
+  // UAE 2025-2026
+  'AE:2025-01-01','AE:2025-12-02','AE:2025-12-03',
+  'AE:2026-01-01','AE:2026-12-02','AE:2026-12-03',
+  // US 2025-2026
+  'US:2025-01-01','US:2025-01-20','US:2025-02-17','US:2025-05-26','US:2025-06-19','US:2025-07-04',
+  'US:2025-09-01','US:2025-10-13','US:2025-11-11','US:2025-11-27','US:2025-12-25',
+  'US:2026-01-01','US:2026-01-19','US:2026-02-16','US:2026-05-25','US:2026-06-19','US:2026-07-04',
+  'US:2026-09-07','US:2026-10-12','US:2026-11-11','US:2026-11-26','US:2026-12-25',
+  // India 2025-2026
+  'IN:2025-01-26','IN:2025-03-29','IN:2025-04-14','IN:2025-05-12','IN:2025-08-15','IN:2025-10-02',
+  'IN:2025-10-20','IN:2025-11-05','IN:2025-12-25',
+  'IN:2026-01-26','IN:2026-03-20','IN:2026-04-03','IN:2026-08-15','IN:2026-10-02','IN:2026-12-25',
+  // Japan 2025-2026
+  'JP:2025-01-01','JP:2025-01-13','JP:2025-02-11','JP:2025-02-23','JP:2025-03-20','JP:2025-04-29',
+  'JP:2025-05-03','JP:2025-05-04','JP:2025-05-05','JP:2025-07-21','JP:2025-08-11','JP:2025-09-15',
+  'JP:2025-09-23','JP:2025-10-13','JP:2025-11-03','JP:2025-11-23','JP:2025-12-23',
+  'JP:2026-01-01','JP:2026-01-12','JP:2026-02-11','JP:2026-02-23','JP:2026-03-20','JP:2026-04-29',
+  'JP:2026-05-03','JP:2026-05-04','JP:2026-05-05','JP:2026-07-20','JP:2026-08-11','JP:2026-09-21',
+  'JP:2026-09-23','JP:2026-10-12','JP:2026-11-03','JP:2026-11-23',
+  // Australia 2025-2026
+  'AU:2025-01-01','AU:2025-01-27','AU:2025-04-18','AU:2025-04-21','AU:2025-04-25','AU:2025-06-09',
+  'AU:2025-12-25','AU:2025-12-26',
+  'AU:2026-01-01','AU:2026-01-26','AU:2026-04-03','AU:2026-04-06','AU:2026-04-27','AU:2026-06-08',
+  'AU:2026-12-25','AU:2026-12-28',
+  // Canada 2025-2026
+  'CA:2025-01-01','CA:2025-02-17','CA:2025-04-18','CA:2025-05-19','CA:2025-07-01','CA:2025-08-04',
+  'CA:2025-09-01','CA:2025-10-13','CA:2025-11-11','CA:2025-12-25','CA:2025-12-26',
+  'CA:2026-01-01','CA:2026-02-16','CA:2026-04-03','CA:2026-05-18','CA:2026-07-01','CA:2026-08-03',
+  'CA:2026-09-07','CA:2026-10-12','CA:2026-11-11','CA:2026-12-25','CA:2026-12-28',
+  // Spain 2025-2026
+  'ES:2025-01-01','ES:2025-01-06','ES:2025-04-18','ES:2025-05-01','ES:2025-08-15',
+  'ES:2025-10-12','ES:2025-11-01','ES:2025-12-06','ES:2025-12-08','ES:2025-12-25',
+  'ES:2026-01-01','ES:2026-01-06','ES:2026-04-03','ES:2026-05-01','ES:2026-08-15',
+  'ES:2026-10-12','ES:2026-11-01','ES:2026-12-06','ES:2026-12-08','ES:2026-12-25',
+]);
+
+function isBankHoliday(cc, date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  return BH.has(`${cc}:${y}-${m}-${d}`);
+}
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+const SK = 'wt_v6';
+const VK = 'wt_views_v3';
+let cities = [];
+let views = {};
+let selHour = null;
+let dayOff = 0;
+let viewsOpen = false;
+let activeViewName = null;
+let use24h = false;
+let ohActive = false;
+let ohFrom = 9;
+let ohTo = 18;
+let homeCityKey = null; // "name|tz"
+
+function load() {
+  try { const s = localStorage.getItem(SK); if (s) cities = JSON.parse(s); else cities = defaultCities(); } catch { cities = defaultCities(); }
+  try { const v = localStorage.getItem(VK); if (v) views = JSON.parse(v); } catch { views = {}; }
+  try { const h = localStorage.getItem('wt_home'); if (h) homeCityKey = h; } catch {}
+}
+function defaultCities() {
+  return ['London','Rome','Amsterdam','New York','Tokyo'].map(n=>ALL.find(c=>c.name===n)).filter(Boolean);
+}
+function save() { localStorage.setItem(SK, JSON.stringify(cities)); }
+function saveViews() { localStorage.setItem(VK, JSON.stringify(views)); }
+
+// ═══════════════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════════════
+function refDate() { const d=new Date(); d.setDate(d.getDate()+dayOff); d.setHours(12,0,0,0); return d; }
+
+function localDayForOffset(offset) {
+  const d=new Date(); d.setDate(d.getDate()+offset); return d;
+}
+
+function tzHourForSlot(tz, slotH) {
+  const d=refDate(); d.setHours(slotH,0,0,0);
+  const s=d.toLocaleString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false});
+  const p=s.split(':'); return {h:parseInt(p[0])%24,m:parseInt(p[1])};
+}
+
+function tzDateForSlot(tz, slotH) {
+  const d=refDate(); d.setHours(slotH,0,0,0);
+  return new Date(d.toLocaleString('en-US',{timeZone:tz}));
+}
+
+function tzOffset(tz) {
+  const n=new Date();
+  const loc=new Date(n.toLocaleString('en-US',{timeZone:tz}));
+  const utc=new Date(n.toLocaleString('en-US',{timeZone:'UTC'}));
+  const diff=(loc-utc)/3600000;
+  const s=diff>=0?'+':'-'; const a=Math.abs(diff); const h=Math.floor(a); const m=Math.round((a-h)*60);
+  return `UTC${s}${h}${m?':'+String(m).padStart(2,'0'):''}`;
+}
+
+function cityNow(tz) {
+  return new Date().toLocaleString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:true});
+}
+
+function dayBoundaryLabel(tz, slotH) {
+  const d=refDate(); d.setHours(slotH,0,0,0);
+  const tzD=new Date(d.toLocaleString('en-US',{timeZone:tz}));
+  const locD=new Date(d.toLocaleString('en-US',{timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone}));
+  tzD.setHours(0,0,0,0); locD.setHours(0,0,0,0);
+  const diff=Math.round((tzD-locD)/86400000);
+  if(!diff) return null;
+  const nd=new Date(d); nd.setDate(nd.getDate()+diff);
+  return nd.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+function cityKey(c) { return c.name + '|' + c.tz; }
+
+function cellCls(h) {
+  if (!ohActive) return h >= 9 && h < 18 ? 'h-work' : 'h-off';
+  return h >= ohFrom && h < ohTo ? 'h-work' : 'h-off';
+}
+function fmtHour(h) {
+  if (use24h) return { n: String(h).padStart(2,'0'), ap: '' };
+  const ap = h >= 12 ? 'pm' : 'am';
+  return { n: String(h % 12 || 12), ap };
+}
+function cityNowFmt(tz) {
+  if (use24h) return new Date().toLocaleString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false});
+  return new Date().toLocaleString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:true});
+}
+
+
+
+// ═══════════════════════════════════════════════════
+// DATE NAV
+// ═══════════════════════════════════════════════════
+function renderNav() {
+  const inn=document.getElementById('dateNavInner');
+  inn.innerHTML='';
+  const today=new Date();
+  for(let i=-1;i<=7;i++){
+    const d=new Date(today); d.setDate(d.getDate()+i);
+    const dow=d.toLocaleDateString('en-US',{weekday:'short'}).toUpperCase();
+    const mon=d.toLocaleDateString('en-US',{month:'short'}).toUpperCase();
+    const day=d.getDate();
+    const jsDay=d.getDay();
+    const anyWk=cities.some(c=>isWeekend(c.cc,jsDay));
+    const btn=document.createElement('button');
+    btn.className='date-pill'+(i===dayOff?' active':'')+(anyWk&&i!==dayOff?' is-weekend':'');
+    btn.innerHTML=i===0
+      ?`<span style="font-size:9px;display:block;opacity:.7">${dow}</span><span>Today</span>`
+      :`<span style="font-size:9px;display:block;opacity:.7">${dow}</span><span>${mon} ${day}</span>`;
+    btn.onclick=()=>{ dayOff=i; selHour=null; renderNav(); renderGrid(); };
+    inn.appendChild(btn);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// VIEWS
+// ═══════════════════════════════════════════════════
+document.getElementById('viewsToggle').onclick=()=>{
+  viewsOpen=!viewsOpen;
+  document.getElementById('viewsBar').classList.toggle('open',viewsOpen);
+  renderViewChips();
+};
+
+document.getElementById('saveViewBtn').onclick=()=>{
+  document.getElementById('viewNameInput').value='';
+  document.getElementById('modalBg').classList.add('open');
+  setTimeout(()=>document.getElementById('viewNameInput').focus(),100);
+};
+
+document.getElementById('modalCancel').onclick=()=>document.getElementById('modalBg').classList.remove('open');
+
+document.getElementById('modalConfirm').onclick=()=>{
+  const name=document.getElementById('viewNameInput').value.trim();
+  if(!name) return;
+  views[name]=cities.map(c=>({name:c.name,tz:c.tz}));
+  saveViews();
+  activeViewName=name;
+  document.getElementById('modalBg').classList.remove('open');
+  renderViewChips();
+};
+
+document.getElementById('viewNameInput').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('modalConfirm').click(); });
+document.getElementById('modalBg').onclick=e=>{ if(e.target===document.getElementById('modalBg')) document.getElementById('modalBg').classList.remove('open'); };
+
+function renderViewChips() {
+  const wrap=document.getElementById('viewChips');
+  const names=Object.keys(views);
+  if(!names.length){wrap.innerHTML='<span style="font-size:11px;color:rgba(255,255,255,0.4);padding:5px 0">No saved views yet</span>';return;}
+  wrap.innerHTML=names.map(n=>`
+    <span class="view-chip">
+      <span class="view-chip-name${n===activeViewName?' active-view':''}" data-vn="${n}">${n}</span>
+      <span class="view-chip-link" data-vl="${n}" title="Copia link">🔗</span>
+      <span class="view-chip-del" data-vd="${n}">×</span>
+    </span>`).join('');
+  wrap.querySelectorAll('.view-chip-name').forEach(el=>{
+    el.onclick=()=>{
+      const vname=el.dataset.vn;
+      const v=views[vname]; if(!v)return;
+      cities=v.map(vc=>ALL.find(c=>c.name===vc.name&&c.tz===vc.tz)).filter(Boolean);
+      activeViewName=vname;
+      save(); renderNav(); renderGrid(); renderViewChips();
+    };
+  });
+  wrap.querySelectorAll('.view-chip-link').forEach(el=>{
+    el.onclick=e=>{
+      e.stopPropagation();
+      const vname=el.dataset.vl;
+      const v=views[vname]; if(!v)return;
+      const encoded=v.map(c=>encodeURIComponent(c.name+'|'+c.tz)).join(',');
+      const url=location.href.split('#')[0]+'#view='+encoded;
+      navigator.clipboard.writeText(url).then(()=>showToast()).catch(()=>{
+        // fallback for non-https (local file)
+        const ta=document.createElement('textarea');
+        ta.value=url; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta); showToast();
+      });
+    };
+  });
+  wrap.querySelectorAll('.view-chip-del').forEach(el=>{
+    el.onclick=e=>{
+      e.stopPropagation();
+      const vname=el.dataset.vd;
+      delete views[vname];
+      if(activeViewName===vname) activeViewName=null;
+      saveViews(); renderViewChips();
+    };
+  });
+}
+
+function showToast() {
+  const t=document.getElementById('copyToast');
+  t.style.opacity='1';
+  setTimeout(()=>t.style.opacity='0', 2000);
+}
+
+// ═══════════════════════════════════════════════════
+// GRID
+// ═══════════════════════════════════════════════════
+function renderGrid() {
+  const gt=document.getElementById('gt');
+  if(!cities.length){
+    gt.innerHTML=`<tr><td colspan="25"><div class="empty-hint"><div class="ei">🌍</div>Type a city above to get started.</div></td></tr>`;
+    return;
+  }
+
+  const curH=dayOff===0?new Date().getHours():12;
+  const ah=selHour!==null?selHour:curH;
+  const hours=Array.from({length:24},(_,i)=>i);
+  const refD=localDayForOffset(dayOff);
+  const refLabel=dayOff===0?'Today':refD.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+  let rows='';
+
+  // Sort: home city first
+  const sorted = homeCityKey
+    ? [...cities].sort((a,b) => (cityKey(a)===homeCityKey ? -1 : cityKey(b)===homeCityKey ? 1 : 0))
+    : cities;
+
+  sorted.forEach((city,ci)=>{
+    const isHome = cityKey(city) === homeCityKey;
+    const origIdx = cities.indexOf(city);
+    rows+='<tr>';
+    const now=cityNowFmt(city.tz);
+    rows+=`<td class="city-cell${isHome?' is-home':''}">
+      <div class="city-top">
+        <span><span class="cname">${city.flag} ${city.name}</span></span>
+        <span style="display:flex;align-items:center;gap:2px">
+          <button class="chome-btn${isHome?' active':''}" data-ci="${origIdx}" title="Set as home">🏠</button>
+          <button class="cdel" data-ci="${origIdx}">×</button>
+        </span>
+      </div>
+      <div class="ccountry">${city.country}${isHome?' <span class="home-tag">home</span>':''}</div>
+      <div class="ctime">${now}</div>
+    </td>`;
+
+    let prevLabel=null;
+    hours.forEach(slotH=>{
+      const {h:ch}=tzHourForSlot(city.tz,slotH);
+      const cellDate=tzDateForSlot(city.tz,slotH);
+      const jsDay=cellDate.getDay();
+      const wk=isWeekend(city.cc,jsDay);
+      const bh=isBankHoliday(city.cc,cellDate);
+      const cls=cellCls(ch);
+      const f=fmtHour(ch);
+      const isSel=slotH===ah;
+
+      let wkCls=wk?' is-wk':'';
+      let bhCls=bh?' is-bh':'';
+      let badges='';
+      if(wk||bh){
+        badges='<span class="cell-badges">';
+        if(wk) badges+='<span class="badge-wk">WK</span>';
+        if(bh) badges+='<span class="badge-bh">HOL</span>';
+        badges+='</span>';
+      }
+
+      const dl=dayBoundaryLabel(city.tz,slotH);
+      let bdCls=''; let dtag='';
+      if(dl&&dl!==prevLabel){ prevLabel=dl; bdCls=' day-bd'; dtag=`<span class="day-tag-abs">${dl}</span>`; }
+
+      rows+=`<td class="hd-cell ${cls}${wkCls}${bhCls}${isSel?' sel':''}${bdCls}" data-h="${slotH}">${dtag}${badges}<span class="ch">${f.n}</span>${f.ap?`<span class="ca">${f.ap}</span>`:''}</td>`;
+    });
+    rows+='</tr>';
+  });
+
+  gt.innerHTML=rows;
+
+  requestAnimationFrame(()=>{
+    const gs=document.getElementById('gs');
+    gs.scrollLeft=Math.max(0,200+ah*54-gs.clientWidth/2+27);
+  });
+
+  gt.querySelectorAll('.hh-cell').forEach(el=>{ el.onclick=()=>{ selHour=parseInt(el.dataset.h); renderGrid(); }; });
+  gt.querySelectorAll('.hd-cell').forEach(el=>{ el.onclick=()=>{ selHour=parseInt(el.dataset.h); renderGrid(); }; });
+  gt.querySelectorAll('.chome-btn').forEach(btn=>{
+    btn.onclick=e=>{ e.stopPropagation();
+      const city=cities[parseInt(btn.dataset.ci)];
+      const key=cityKey(city);
+      homeCityKey = homeCityKey===key ? null : key;
+      localStorage.setItem('wt_home', homeCityKey||'');
+      renderGrid();
+    };
+  });
+  gt.querySelectorAll('.cdel').forEach(btn=>{
+    btn.onclick=e=>{ e.stopPropagation(); cities.splice(parseInt(btn.dataset.ci),1); save(); renderGrid(); };
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// SEARCH  (fixed: using proper event on text input)
+// ═══════════════════════════════════════════════════
+const si=document.getElementById('si');
+const dd=document.getElementById('dd');
+
+function doSearch() {
+  const q=si.value.trim().toLowerCase();
+  if(!q){ dd.classList.remove('open'); return; }
+  const added=new Set(cities.map(c=>c.name+'|'+c.tz));
+  const res=ALL.filter(c=>
+    !added.has(c.name+'|'+c.tz) &&
+    (c.name.toLowerCase().includes(q)||c.country.toLowerCase().includes(q)||c.tz.toLowerCase().includes(q))
+  ).slice(0,30);
+
+  if(!res.length){
+    dd.innerHTML=`<div class="drop-item"><div><div class="drop-name" style="color:#999">No results for "${si.value}"</div></div></div>`;
+  } else {
+    dd.innerHTML=res.map((c,i)=>`
+      <div class="drop-item" data-i="${i}">
+        <span class="drop-flag">${c.flag}</span>
+        <div><div class="drop-name">${c.name}</div><div class="drop-country">${c.country} · ${c.tz}</div></div>
+      </div>`).join('');
+    dd.querySelectorAll('.drop-item').forEach(el=>{
+      el.addEventListener('mousedown', e=>{
+        e.preventDefault();
+        const city=res[parseInt(el.dataset.i)];
+        cities.push(city); save();
+        si.value=''; dd.classList.remove('open');
+        renderNav(); renderGrid();
+      });
+    });
+  }
+  dd.classList.add('open');
+}
+
+si.addEventListener('input', doSearch);
+si.addEventListener('focus', doSearch);
+si.addEventListener('blur', ()=>{ setTimeout(()=>dd.classList.remove('open'), 150); });
+
+// ═══════════════════════════════════════════════════
+// LIVE TICK
+// ═══════════════════════════════════════════════════
+setInterval(()=>{ if(selHour===null) renderGrid(); }, 60000);
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+// ── FORMAT TOGGLE ──
+const fmtBtn = document.getElementById('fmtToggle');
+fmtBtn.onclick = () => {
+  use24h = !use24h;
+  fmtBtn.textContent = use24h ? '24h' : '12h';
+  fmtBtn.classList.toggle('active', use24h);
+  document.body.classList.toggle('fmt24', use24h);
+  renderGrid();
+};
+
+// ── OFFICE HOURS ──
+const ohBtn = document.getElementById('ohToggle');
+const ohPicker = document.getElementById('ohPicker');
+const ohFromSel = document.getElementById('ohFrom');
+const ohToSel = document.getElementById('ohTo');
+
+// Populate hour selects
+for (let h=0; h<24; h++) {
+  const lbl = h === 0 ? '12 am' : h < 12 ? `${h} am` : h === 12 ? '12 pm' : `${h-12} pm`;
+  ohFromSel.innerHTML += `<option value="${h}"${h===9?' selected':''}>${lbl}</option>`;
+  ohToSel.innerHTML += `<option value="${h}"${h===18?' selected':''}>${lbl}</option>`;
+}
+
+ohBtn.onclick = () => {
+  ohActive = !ohActive;
+  ohBtn.classList.toggle('active', ohActive);
+  ohPicker.classList.toggle('open', ohActive);
+  renderGrid();
+};
+ohFromSel.onchange = () => { ohFrom = parseInt(ohFromSel.value); renderGrid(); };
+ohToSel.onchange = () => { ohTo = parseInt(ohToSel.value); renderGrid(); };
+
+// ── LOAD FROM URL HASH (shared view link) ──
+function loadFromHash() {
+  const hash = location.hash;
+  if (!hash.startsWith('#view=')) return false;
+  try {
+    const encoded = hash.slice(6).split(',');
+    const loaded = encoded.map(part => {
+      const [name, tz] = decodeURIComponent(part).split('|');
+      return ALL.find(c => c.name === name && c.tz === tz);
+    }).filter(Boolean);
+    if (loaded.length) { cities = loaded; save(); return true; }
+  } catch(e) {}
+  return false;
+}
+
+load();
+loadFromHash();
+renderNav();
+renderGrid();
+renderViewChips();
+</script>
+</body>
+</html>

@@ -288,6 +288,52 @@ body.fmt24 .hd-cell { font-size: 11px; }
 .btn-save { background: var(--blue); color: var(--white); border: none; border-radius: 8px; padding: 8px 16px; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; }
 
 .bottom-safe { flex-shrink: 0; height: env(safe-area-inset-bottom); background: var(--white); }
+
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  :root {
+    --left-w: 100px;
+    --cell-w: 44px;
+    --cell-h: 44px;
+    --hdr-h: 42px;
+  }
+  .topbar {
+    flex-wrap: wrap; gap: 6px;
+    padding: 8px 10px;
+    padding-top: calc(env(safe-area-inset-top) + 8px);
+    height: auto;
+  }
+  .logo { font-size: 14px; }
+  .search-wrap { order: 2; flex: 1 1 100%; }
+  .tb-ctrl { font-size: 10px; padding: 5px 8px; order: 3; }
+  .oh-picker { order: 4; }
+  .oh-picker label { font-size: 9px; }
+  .oh-picker select { font-size: 10px; }
+  .views-btn { font-size: 10px; padding: 5px 8px; order: 5; }
+  .date-nav { padding-left: 0; }
+  .date-pill { font-size: 10px; padding: 4px 8px; }
+  .city-cell { padding: 4px 6px; }
+  .cname { font-size: 11px; max-width: 72px; }
+  .ccountry { display: none; }
+  .ctime { font-size: 10px; margin-top: 1px; }
+  .chome-btn { font-size: 10px; }
+  .cdel { font-size: 12px; }
+  .home-tag { font-size: 6px; }
+  .hd-cell { font-size: 11px; }
+  .hd-cell .ch { font-size: 11px; }
+  .hd-cell .ca { font-size: 8px; }
+  body.fmt24 .hd-cell { font-size: 11px; }
+  body.fmt24 .hd-cell .ch { font-size: 11px; }
+  .day-tag-abs { font-size: 6px; }
+  .badge-wk { font-size: 6px; }
+  .badge-bh { font-size: 5px; }
+  .views-bar { padding: 0 10px 6px; gap: 4px; }
+  .view-chip-name { font-size: 10px; padding: 4px 8px; }
+  .save-view-btn { font-size: 10px; padding: 4px 10px; }
+  .drop-name { font-size: 13px; }
+  .drop-country { font-size: 10px; }
+  .modal { width: calc(100vw - 32px); }
+}
 </style>
 </head>
 <body>
